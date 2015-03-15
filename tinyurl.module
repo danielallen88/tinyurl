@@ -101,7 +101,7 @@ function tinyurl_get_url_form_validate($form, &$form_state) {
 
 function tinyurl_get_url($hash) {
   $q = db_select('tinyurl_full_url', 'u');
-  $q->fields('u', array('full_url', 'url_hash'));
+  $q->fields('u', array('full_url', 'url_hash', 'url_id'));
   $q->condition('u.url_hash', $hash, '=');
   $r = $q->execute()->fetchAssoc();
 
@@ -161,6 +161,8 @@ function tinyurl_goto_url() {
   $r = tinyurl_get_url(arg(1));
 
   if (isset($r['full_url']) && !empty($r['full_url'])) {
+    tinyurl_update_access($r['url_id']);
+    tinyurl_housekeep_url();
     drupal_goto($r['full_url']);
   }
   else {
@@ -179,4 +181,20 @@ function tinyurl_gen_url() {
   }
 
   return $hash;
+}
+
+function tinyurl_update_access($id) {
+  $u = db_update('tinyurl_full_url')
+    ->fields(array(
+      'last_ip' => ip_address(),
+      'last_access' => date('Y-m-d H:i:s'),
+    ))
+    ->condition('url_id', $id, '=')
+    ->execute();
+}
+
+function tinyurl_housekeep_url() {
+  $d = db_delete('tinyurl_full_url')
+    ->condition('last_access', date('Y-m-d H:i:s', strtotime("-30 days")), '<=')
+    ->execute();;
 }

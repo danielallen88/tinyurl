@@ -23,6 +23,15 @@ function tinyurl_schema() {
         'size' => 'medium',
         'not null' => FALSE,
       ),
+      'last_ip' => array(
+        'type' => 'varchar',
+        'length' => 15,
+        'not null' => FALSE,
+      ),
+      'last_access' => array(
+        'mysql_type' => 'datetime',
+        'not null' => FALSE,
+      ),
       'created_date' => array(
         'mysql_type' => 'datetime',
         'not null' => FALSE,
