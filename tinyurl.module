@@ -152,6 +152,7 @@ function tinyurl_set_url($form, &$form_state) {
         ->execute();
     }
 
+    tinyurl_housekeep_url();
     $href = $GLOBALS['base_url'] . '/go/' . $hash;
     return '<div id="browser">'.l(t($href), $href).'</div>';
   }
@@ -162,7 +163,6 @@ function tinyurl_goto_url() {
 
   if (isset($r['full_url']) && !empty($r['full_url'])) {
     tinyurl_update_access($r['url_id']);
-    tinyurl_housekeep_url();
     drupal_goto($r['full_url']);
   }
   else {
