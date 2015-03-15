@@ -110,6 +110,19 @@ function tinyurl_get_url($hash) {
   return $r;
 }
 
+function tinyurl_check_duplicate($url) {
+  $q = db_select('tinyurl_full_url', 'u');
+  $q->fields('u', array('url_hash'));
+  $q->condition('u.full_url', $url, '=');
+  $r = $q->execute()->fetchAssoc();
+
+  if (isset($r['url_hash']) && !empty($r['url_hash'])) {
+    return $r['url_hash'];
+  }
+
+  return false;
+}
+
 function tinyurl_set_url($form, &$form_state) {
   global $variables;
 
@@ -128,20 +141,21 @@ function tinyurl_set_url($form, &$form_state) {
   }
   else {
     $url = $form_state['values']['full_url'];
-    $hash = tinyurl_gen_url();
 
-    $q = db_insert('tinyurl_full_url')
+    if (!$hash = tinyurl_check_duplicate($url)) {
+      $hash = tinyurl_gen_url();
+
+      $q = db_insert('tinyurl_full_url')
         ->fields(array(
           'full_url' => url($url),
           'url_hash' => $hash,
           'created_date' => date('Y-m-d H:i:s')
         ))
         ->execute();
-
-    if ($q) {
-      $href = $GLOBALS['base_url'] . '/go/' . $hash;
-      return '<a href="'.$href.'">'.$href.'</a>';
     }
+
+    $href = $GLOBALS['base_url'] . '/go/' . $hash;
+    return '<div id="browser"><a href="'.$href.'">'.$href.'</a></div>';
   }
 }
 
