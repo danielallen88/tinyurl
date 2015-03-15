@@ -1,0 +1,46 @@
+<?php
+
+function tinyurl_schema() {
+  $schema['tinyurl_full_url'] = array(
+    'description' => 'Tinyurl storage',
+    'fields' => array(
+      'url_id' => array(
+        'description' => 'URL ID',
+        'type' => 'serial',
+        'length' => 11,
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'url_hash' => array(
+        'description' => 'Shorten URL',
+        'type' => 'varchar',
+        'length' => 5,
+        'not null' => FALSE,
+      ),
+      'full_url' => array(
+        'description' => 'Full URL',
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => FALSE,
+      ),
+      'created_date' => array(
+        'mysql_type' => 'datetime',
+        'not null' => FALSE,
+        'description' => 'Create Date',
+      )
+    ),
+    'primary key' => array('url_id'),
+  );
+
+  return $schema;
+}
+
+function tinyurl_install() {
+  //Drupal will create table in schema by default during installation
+  //Do something during install if needed
+}
+
+function tinyurl_uninstall() {
+  //Drop created table upon uninstall
+  db_drop_table('tinyurl_full_url');
+}

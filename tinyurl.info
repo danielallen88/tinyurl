@@ -1,0 +1,4 @@
+name = Tiny Url
+description = Drupal module to shorten url
+core = 7.x
+version = "7.34-1.0"

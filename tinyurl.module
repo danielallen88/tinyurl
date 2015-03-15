@@ -1,0 +1,170 @@
+<?php
+function tinyurl_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#tinyurl":
+      return '<p>' . t("A module to shorten URLs") . '</p>';
+      break;
+  }
+}
+
+function tinyurl_permission() {
+  return array(
+    'access tinyurl' => array(
+      'title' => t('URL Shortener Access'),
+      'description' => t('To control who can access this module'),
+      'restrict access' => FALSE,
+    ),
+  );
+}
+
+function tinyurl_menu() {
+  $items = array();
+
+  $items['url/create'] = array(
+    'title' => t('Create a new shorten URL'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tinyurl_get_url_form'),
+    'access arguments' => array('access tinyurl'),
+    'access callback' => true,
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['go'] = array(
+    'title' => t('Go to url'),
+    'page callback' => 'tinyurl_goto_url',
+    'access arguments' => array('access tinyurl'),
+    'access callback' => true,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function tinyurl_get_url_form($form, &$form_state) {
+  $form['#attributes']['autocomplete'] = 'off';
+
+  $form['full_url'] = array(
+    '#title' => t('Enter URL'),
+    '#type' => 'textfield',
+    '#size' => 100,
+    '#maxlength' => 500,
+    //'#required' => true,
+    '#default_value' => isset($form_state['values']['full_url']) ? $form_state['values']['full_url'] : '',
+  );
+
+  $form['save_quota'] = array(
+    '#value' => 'Shorten This',
+    '#type' => 'submit',
+    '#name' => 'shorten',
+    '#attributes' => array(
+      'class' => array('btn', 'btn-primary', 'save-quota', 'feasibility-submit'),
+      'data-target' => array('#ajax-modal'),
+      'data-toggle' => array('modal'),
+    ),
+    '#validate' => array('tinyurl_get_url_form_validate'),
+    '#ajax' => array(
+      'callback' => 'tinyurl_set_url',
+      'wrapper' => 'browser',
+      'method' => 'replace',
+      'effect' => 'slide',
+      'progress' => array(
+        'type' => 'throbber',
+        'message' => 'Processing...',
+      ),
+      'event' => 'click',
+    ),
+  );
+
+  $form['result'] = array(
+    '#prefix' => '<div id="browser">',
+    '#suffix' => '</div>'
+  );
+
+  return $form;
+}
+
+function tinyurl_get_url_form_validate($form, &$form_state) {
+  if (empty($form_state['values']['full_url'])) {
+    form_set_error('url', 'URL field cannot be empty');
+  }
+  else {
+    if (filter_var($form_state['values']['full_url'], FILTER_VALIDATE_URL)) {
+      $headers = @get_headers($form_state['values']['full_url']);
+
+      if($headers[0] == 'HTTP/1.1 400 Bad Request'){
+        form_set_error('url', 'URL doesn\'t exists');
+      }
+    }
+    else {
+      form_set_error('url', 'Please enter a valid URL');
+    }
+  }
+}
+
+function tinyurl_get_url($hash) {
+  $q = db_select('tinyurl_full_url', 'u');
+  $q->fields('u', array('full_url', 'url_hash'));
+  $q->condition('u.url_hash', $hash, '=');
+  $r = $q->execute()->fetchAssoc();
+
+  return $r;
+}
+
+function tinyurl_set_url($form, &$form_state) {
+  global $variables;
+
+  if (form_get_errors()) {
+    $msg = theme_status_messages($variables, 'error');
+
+    $commands = array();
+    $commands[] = ajax_command_remove('#messages');
+    $commands[] = ajax_command_before('#block-system-main', '<div id="messages">' . $msg . '</div>');
+    $commands[] = ajax_command_replace("#tinyurl-get-url-form", render($form));
+
+    return array(
+      '#type' => 'ajax',
+      '#commands' => $commands
+    );
+  }
+  else {
+    $url = $form_state['values']['full_url'];
+    $hash = tinyurl_gen_url();
+
+    $q = db_insert('tinyurl_full_url')
+        ->fields(array(
+          'full_url' => url($url),
+          'url_hash' => $hash,
+          'created_date' => date('Y-m-d H:i:s')
+        ))
+        ->execute();
+
+    if ($q) {
+      $href = $GLOBALS['base_url'] . '/go/' . $hash;
+      return '<a href="'.$href.'">'.$href.'</a>';
+    }
+  }
+}
+
+function tinyurl_goto_url() {
+  $r = tinyurl_get_url(arg(1));
+
+  if (isset($r['full_url']) && !empty($r['full_url'])) {
+    drupal_goto($r['full_url']);
+  }
+  else {
+    drupal_set_message('Sorry we can\'t seems to find a short url for this path', 'error');
+    drupal_goto('url/create');
+  }
+}
+
+function tinyurl_gen_url() {
+  $string = range('a','z') . range(0,9) . range('A','Z');
+  $hash = substr(str_shuffle($string), rand(0,9), 5);
+  $r = tinyurl_get_url($hash);
+
+  if (isset($r['url_hash']) && !empty($r['url_hash'])) {
+    return tinyurl_gen_url();
+  }
+
+  return $hash;
+}
