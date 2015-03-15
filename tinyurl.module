@@ -48,7 +48,6 @@ function tinyurl_get_url_form($form, &$form_state) {
     '#type' => 'textfield',
     '#size' => 100,
     '#maxlength' => 500,
-    //'#required' => true,
     '#default_value' => isset($form_state['values']['full_url']) ? $form_state['values']['full_url'] : '',
   );
 
@@ -172,7 +171,7 @@ function tinyurl_goto_url() {
 }
 
 function tinyurl_gen_url() {
-  $string = range('a','z') . range(0,9) . range('A','Z');
+  $string = range('a','k') . '0123456789' . range('L','Z') . range('l','z') . '0123456789' . range('A','K');
   $hash = substr(str_shuffle($string), rand(0,9), 5);
   $r = tinyurl_get_url($hash);
 
