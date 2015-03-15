@@ -89,7 +89,7 @@ function tinyurl_get_url_form_validate($form, &$form_state) {
     if (filter_var($form_state['values']['full_url'], FILTER_VALIDATE_URL)) {
       $headers = @get_headers($form_state['values']['full_url']);
 
-      if($headers[0] == 'HTTP/1.1 400 Bad Request'){
+      if($headers[0] == 'HTTP/1.1 400 Bad Request' || empty($headers)){
         form_set_error('url', t('URL doesn\'t exists'));
       }
     }
@@ -123,19 +123,13 @@ function tinyurl_check_duplicate($url) {
 
 function tinyurl_set_url($form, &$form_state) {
   global $variables;
+  $commands = array();
+  $commands[] = ajax_command_remove('#messages');
 
   if (form_get_errors()) {
     $msg = theme_status_messages($variables, 'error');
-
-    $commands = array();
-    $commands[] = ajax_command_remove('#messages');
     $commands[] = ajax_command_before('#block-system-main', '<div id="messages">' . $msg . '</div>');
     $commands[] = ajax_command_replace("#tinyurl-get-url-form", render($form));
-
-    return array(
-      '#type' => 'ajax',
-      '#commands' => $commands
-    );
   }
   else {
     $url = $form_state['values']['full_url'];
@@ -154,8 +148,13 @@ function tinyurl_set_url($form, &$form_state) {
 
     tinyurl_housekeep_url();
     $href = $GLOBALS['base_url'] . '/go/' . $hash;
-    return '<div id="browser">'.l(t($href), $href).'</div>';
+    $commands[] = ajax_command_replace('#browser', '<div id="browser">'.l(t($href), $href).'</div>');
   }
+
+  return array(
+    '#type' => 'ajax',
+    '#commands' => $commands
+  );
 }
 
 function tinyurl_goto_url() {
