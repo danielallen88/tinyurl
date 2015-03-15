@@ -84,18 +84,18 @@ function tinyurl_get_url_form($form, &$form_state) {
 
 function tinyurl_get_url_form_validate($form, &$form_state) {
   if (empty($form_state['values']['full_url'])) {
-    form_set_error('url', 'URL field cannot be empty');
+    form_set_error('url', t('URL field cannot be empty'));
   }
   else {
     if (filter_var($form_state['values']['full_url'], FILTER_VALIDATE_URL)) {
       $headers = @get_headers($form_state['values']['full_url']);
 
       if($headers[0] == 'HTTP/1.1 400 Bad Request'){
-        form_set_error('url', 'URL doesn\'t exists');
+        form_set_error('url', t('URL doesn\'t exists'));
       }
     }
     else {
-      form_set_error('url', 'Please enter a valid URL');
+      form_set_error('url', t('Please enter a valid URL'));
     }
   }
 }
@@ -154,7 +154,7 @@ function tinyurl_set_url($form, &$form_state) {
     }
 
     $href = $GLOBALS['base_url'] . '/go/' . $hash;
-    return '<div id="browser"><a href="'.$href.'">'.$href.'</a></div>';
+    return '<div id="browser">'.l(t($href), $href).'</div>';
   }
 }
 
@@ -165,7 +165,7 @@ function tinyurl_goto_url() {
     drupal_goto($r['full_url']);
   }
   else {
-    drupal_set_message('Sorry we can\'t seems to find a short url for this path', 'error');
+    drupal_set_message(t('Sorry we can\'t seems to find a short url for this path'), 'error');
     drupal_goto('url/create');
   }
 }
